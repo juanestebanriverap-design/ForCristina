@@ -1,0 +1,20 @@
+# node
+**/node_modules/
+**/dist/
+**/build/
+
+# env / secrets
+**/.env
+**/.env.*
+!mobile/.env.example
+!backend/.env.example
+!frontend/.env.example
+
+# logs
+**/*.log
+
+# OS
+.DS_Store
+
+# Electron build output
+electron/release/

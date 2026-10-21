@@ -1,0 +1,338 @@
+:root { font-family: system-ui, -apple-system, Arial; }
+
+body { margin: 0; background: #0b1220; color: #e8eefc; }
+
+.container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+
+.header { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+
+.card {
+  background:#111b33;
+  border:1px solid #223055;
+  border-radius:14px;
+  padding:16px;
+  margin-top:16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+}
+
+.tabs { display:flex; gap:8px; margin-top:12px; flex-wrap: wrap; }
+.tabs button {
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid #223055;
+  background:#0f1730;
+  color:#e8eefc;
+  cursor:pointer;
+}
+.tabs button.active { background:#1b2a55; border-color:#2f4b8b; }
+
+.panel { background:#0f1730; border:1px solid #223055; border-radius:12px; padding:12px; margin-top:12px; }
+.panel-header { display:flex; flex-direction:column; gap:6px; margin-bottom: 8px; }
+
+.grid { display:grid; gap:10px; }
+.grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.full { grid-column: 1 / -1; }
+
+label { font-size: 12px; opacity: .9; display:block; margin-bottom: 6px; }
+
+input, select {
+  padding:10px;
+  border-radius:10px;
+  border:1px solid #223055;
+  background:#0b1220;
+  color:#e8eefc;
+  outline: none;
+}
+
+input:focus, select:focus {
+  border-color: rgba(232,238,252,.22);
+  box-shadow: 0 0 0 4px rgba(232,238,252,.10);
+}
+
+.btn {
+  padding:10px 12px;
+  border-radius:10px;
+  border:0;
+  background:#3b82f6;
+  color:white;
+  cursor:pointer;
+  font-weight: 600;
+}
+.btn.secondary { background:#334155; }
+.btn.danger { background:#ef4444; }
+
+.error {
+  margin-top: 10px;
+  padding: 10px;
+  background: #3b0b12;
+  border: 1px solid #7f1d1d;
+  border-radius: 10px;
+}
+.ok {
+  margin-top: 10px;
+  padding: 10px;
+  background: #0b2f1d;
+  border: 1px solid #14532d;
+  border-radius: 10px;
+}
+
+.table { width:100%; border-collapse: collapse; margin-top: 12px; overflow: hidden; }
+.table th, .table td { border-bottom: 1px solid #223055; padding: 10px 8px; text-align:left; vertical-align: middle; }
+.table th { opacity: .85; font-size: 12px; }
+.table tr:hover td { background: rgba(59,130,246,.07); }
+
+.row { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top: 12px; flex-wrap: wrap; }
+.muted { opacity: .75; font-size: 12px; }
+
+.stats { display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 10px 0; }
+.stat { background:#0b1220; border:1px solid #223055; border-radius: 12px; padding: 12px; }
+.stat-title { font-size: 12px; opacity: .8; }
+.stat-value { font-size: 18px; font-weight: 800; margin-top: 6px; }
+.stat-subtitle { font-size: 12px; opacity: .75; margin-top: 4px; }
+
+@media (max-width: 900px) {
+  .stats { grid-template-columns: 1fr; }
+  
+}
+
+/* ===== Ticket (factura estilo recibo) ===== */
+.ticket-wrap { margin-top: 12px; overflow:auto; }
+
+.ticket {
+  width: 360px;
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  box-shadow: 0 10px 26px rgba(0,0,0,.10);
+}
+
+.ticket, .ticket * {
+  color: #000000 !important;
+  background: transparent;
+  text-shadow: none !important;
+  filter: none !important;
+  opacity: 1 !important;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.ticket .t-center { text-align: center; }
+.ticket .t-muted { color: #111 !important; opacity: .75; font-size: 11px; }
+.ticket .t-title { font-size: 16px; font-weight: 900; letter-spacing: .2px; }
+.ticket .t-line { border-top: 1px dashed #111; margin: 10px 0; }
+
+.ticket .t-row {
+  display:flex;
+  justify-content:space-between;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+/* Items del ticket en formato campo: valor */
+.t-items { display: grid; gap: 10px; margin-top: 10px; }
+.t-item-card { border: 1px dashed #999; border-radius: 10px; padding: 10px; }
+.t-field {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.35;
+  padding: 3px 0;
+}
+.t-label { font-weight: 900; }
+.t-value { text-align: right; }
+
+/* ===== Apple-ish / Professional dashboard login ===== */
+.login-page.pro{
+  min-height: 100vh;
+  display:grid;
+  place-items:center;
+  padding: 28px;
+  background: #0b1220;
+}
+
+.login-shell{
+  width: 100%;
+  max-width: 920px;
+  display:grid;
+  grid-template-columns: 1.05fr .95fr;
+  border-radius: 22px;
+  overflow:hidden;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(17,27,51,.65);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 28px 90px rgba(0,0,0,.55),
+    inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+.login-left{ padding: 26px; }
+
+.brand{ display:flex; align-items:center; gap: 10px; margin-bottom: 14px; }
+
+.brand-mark{
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #e8eefc;
+  box-shadow: 0 0 0 6px rgba(232,238,252,.08);
+}
+
+.brand-name{ font-weight: 900; letter-spacing: .2px; }
+.brand-sub{ font-size: 12px; opacity: .7; margin-top: 1px; }
+
+.login-h1{ margin: 10px 0 6px; font-size: 22px; letter-spacing: .2px; }
+
+.login-p{
+  margin: 0 0 14px;
+  font-size: 13px;
+  opacity: .78;
+  max-width: 46ch;
+  line-height: 1.5;
+}
+
+.login-form.pro{ display:grid; gap: 12px; }
+
+.login-form.pro .field label{
+  font-size: 12px;
+  opacity: .85;
+  display:block;
+  margin-bottom: 6px;
+}
+
+.login-form.pro input{
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(11,18,32,.65);
+  color: #e8eefc;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.login-form.pro input:focus{
+  border-color: rgba(232,238,252,.22);
+  box-shadow: 0 0 0 4px rgba(232,238,252,.10);
+}
+
+.pro-login-btn{
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #e8eefc;
+  color: #0b1220;
+  font-weight: 900;
+}
+
+.pro-login-btn:disabled{ opacity: .7; cursor:not-allowed; }
+
+.login-meta{ text-align:center; font-size: 12px; opacity: .8; }
+
+.login-meta code{
+  background: rgba(11,18,32,.75);
+  border: 1px solid rgba(255,255,255,.10);
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: #e8eefc;
+}
+
+.login-right{
+  position: relative;
+  background:
+    radial-gradient(900px 520px at 10% 15%, rgba(232,238,252,.10), transparent 60%),
+    radial-gradient(650px 420px at 70% 30%, rgba(232,238,252,.08), transparent 60%),
+    radial-gradient(720px 460px at 40% 85%, rgba(232,238,252,.07), transparent 62%),
+    linear-gradient(180deg, rgba(11,18,32,.35), rgba(11,18,32,.70));
+  border-left: 1px solid rgba(255,255,255,.06);
+}
+
+.orb{ position:absolute; border-radius: 999px; opacity: .9; }
+.orb-a{
+  width: 240px; height: 240px;
+  top: 40px; left: 40px;
+  background: radial-gradient(circle at 30% 30%, rgba(232,238,252,.22), rgba(232,238,252,0) 62%);
+}
+.orb-b{
+  width: 320px; height: 320px;
+  top: 140px; right: -60px;
+  background: radial-gradient(circle at 40% 35%, rgba(232,238,252,.18), rgba(232,238,252,0) 62%);
+}
+.orb-c{
+  width: 260px; height: 260px;
+  bottom: -80px; left: 90px;
+  background: radial-gradient(circle at 40% 35%, rgba(232,238,252,.14), rgba(232,238,252,0) 62%);
+}
+
+.gridlines{
+  position:absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,.045) 1px, transparent 1px);
+  background-size: 36px 36px;
+  mask-image: radial-gradient(circle at 35% 30%, rgba(0,0,0,1), rgba(0,0,0,0) 65%);
+  opacity: .55;
+}
+
+@media (max-width: 920px){
+  .login-shell{ grid-template-columns: 1fr; max-width: 520px; }
+  .login-right{ display:none; }
+  
+  
+}
+/* ===== BillingPanel: líneas de productos en horizontal ===== */
+.billing-line {
+  display: grid;
+  grid-template-columns: minmax(240px, 2.2fr) 140px 180px 120px;
+  gap: 16px;
+  align-items: start;       /* antes end */
+  margin: 12px 0;
+}
+
+.billing-line > div {
+  min-width: 0;            /* evita overflow raro */
+}
+
+.billing-line label {
+  margin-bottom: 6px;
+}
+
+.billing-line input,
+.billing-line select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Subtotal bajo el precio, sin “mover” la fila */
+.billing-line .line-subtotal {
+  margin-top: 6px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+/* Botón a la derecha, alineado con los inputs */
+.billing-line .line-actions {
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+}
+
+.billing-line .line-actions button {
+  width: 100%;
+}
+
+/* En pantallas pequeñas sí se apila */
+@media (max-width: 900px) {
+  .billing-line {
+    grid-template-columns: 1fr;
+  }
+  .billing-line .line-actions button {
+    width: auto;
+  }
+}
