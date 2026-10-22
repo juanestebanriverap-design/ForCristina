@@ -8,9 +8,15 @@ if (!process.env.DATABASE_URL) {
   throw new Error("DATABASE_URL is required to connect to Supabase PostgreSQL.");
 }
 
+const caCertificate = process.env.DATABASE_CA_CERT_BASE64
+  ? Buffer.from(process.env.DATABASE_CA_CERT_BASE64, "base64").toString("utf8")
+  : undefined;
+
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.PGSSLMODE === "disable" ? false : { rejectUnauthorized: true },
+  ssl: process.env.PGSSLMODE === "disable"
+    ? false
+    : { rejectUnauthorized: true, ...(caCertificate ? { ca: caCertificate } : {}) },
   max: Number(process.env.DB_POOL_SIZE || 5),
   idleTimeoutMillis: 30_000,
   connectionTimeoutMillis: 10_000,

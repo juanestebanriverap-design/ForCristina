@@ -26,7 +26,13 @@ no pongas ese URI ni una clave `service_role` en Electron o Android.
 2. En el servicio de Render, configura `DATABASE_URL` con el URI de Supabase
    (variable secreta). Configura `JWT_SECRET` con un valor aleatorio privado.
    No uses la contraseña de ejemplo de `.env.example`.
-3. Espera el despliegue. El backend crea las tablas PostgreSQL al arrancar y
+3. En Supabase, descarga el certificado CA desde **Database → Settings →
+   SSL Configuration**. En un Mac, codifícalo en una sola línea con
+   `base64 -i prod-ca-2021.crt | tr -d '\n'` y guarda el resultado como la
+   variable `DATABASE_CA_CERT_BASE64` en Render. Esto permite validar el
+   certificado TLS sin desactivar la verificación. Mantén `PGSSLMODE` sin
+   definir; no configures `disable`.
+4. Espera el despliegue. El backend crea las tablas PostgreSQL al arrancar y
    verifica la base de datos en `/api/health`. La URL será similar a
    `https://forcristina-api.onrender.com/api`.
 
