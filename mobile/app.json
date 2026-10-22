@@ -23,6 +23,12 @@
     },
     "plugins": [
       "expo-sharing"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "449bc936-1e57-47fc-a04c-0c43ea60417d"
+      }
+    },
+    "owner": "rivera1221"
   }
 }

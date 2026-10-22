@@ -56,8 +56,8 @@ de Render más `/api`; nunca incluyas la contraseña de Supabase en la app.
 
 ## Compilar la APK
 
-1. Crea una cuenta gratuita de Expo y configura `EXPO_PUBLIC_API_URL` en el
-   entorno `preview` de EAS con la URL pública de Render.
+1. Crea una cuenta gratuita de Expo. El perfil `preview` de `eas.json` ya
+   configura la URL pública de Render para esta API.
 2. Desde esta carpeta, inicia sesión con `npx eas-cli login`.
 3. Genera la APK instalable con `npx eas-cli build --platform android --profile preview`.
 4. Cuando termine la compilación, descarga el APK desde el enlace que entrega EAS.
