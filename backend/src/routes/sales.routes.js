@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.middleware.js";
+import { asyncHandler } from "../middleware/async-handler.js";
 import {
   createSale,
+  updateSale,
   listSales,
   getSale,
   deleteSaleItem,
@@ -12,13 +14,14 @@ const router = Router();
 
 router.use(requireAuth);
 
-router.get("/", listSales);
-router.post("/", createSale);
+router.get("/", asyncHandler(listSales));
+router.post("/", asyncHandler(createSale));
 
-router.get("/:id", getSale);
+router.put("/:id", asyncHandler(updateSale));
+router.get("/:id", asyncHandler(getSale));
 
 // editar/eliminar renglones de una venta
-router.patch("/:saleId/items/:itemId", updateSaleItemQuantity);
-router.delete("/:saleId/items/:itemId", deleteSaleItem);
+router.patch("/:saleId/items/:itemId", asyncHandler(updateSaleItemQuantity));
+router.delete("/:saleId/items/:itemId", asyncHandler(deleteSaleItem));
 
 export default router;

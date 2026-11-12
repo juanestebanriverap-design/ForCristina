@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import { db } from "../db/sqlite.js";
+import { query } from "../db/postgres.js";
 
 export async function login(req, res) {
   const { email, password } = req.body || {};
@@ -8,9 +8,11 @@ export async function login(req, res) {
     return res.status(400).json({ message: "email and password required" });
   }
 
-  const admin = db
-    .prepare("SELECT id, tenant_id, email, password_hash, name FROM admins WHERE email = ? LIMIT 1")
-    .get(email);
+  const result = await query(
+    "SELECT id, tenant_id, email, password_hash, name FROM admins WHERE email = $1 LIMIT 1",
+    [email]
+  );
+  const admin = result.rows[0];
 
   if (!admin) return res.status(401).json({ message: "Invalid credentials" });
 

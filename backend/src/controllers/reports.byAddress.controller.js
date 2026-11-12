@@ -1,6 +1,9 @@
-import { db } from "../db/sqlite.js";
+import { query } from "../db/postgres.js";
 
 export async function reportByAddress(req, res) {
+  const tenantId = Number(req.user?.tenantId);
+  if (!tenantId) return res.status(401).json({ message: "No autorizado" });
+
   const year = Number(req.query.year);
   const month = Number(req.query.month);
 
@@ -14,13 +17,13 @@ export async function reportByAddress(req, res) {
   const end = `${nextYear}-${String(nextMonth).padStart(2, "0")}-01`;
 
   // A) Producto más vendido por dirección (Top 1 por cantidad)
-  const byAddressRows = db
-    .prepare(
+  const byAddressResult = await query(
       `
       WITH sales_in_range AS (
-        SELECT s.id AS sale_id, s.client_id
+        SELECT s.id AS sale_id, s.client_id, s.tenant_id
         FROM sales s
-        WHERE s.sale_date >= ? AND s.sale_date < ?
+        WHERE s.tenant_id = $1
+          AND s.sale_date >= $2::date AND s.sale_date < $3::date
       ),
       items AS (
         SELECT
@@ -30,9 +33,9 @@ export async function reportByAddress(req, res) {
           SUM(si.quantity) AS qty,
           SUM(si.quantity * si.unit_price) AS revenue
         FROM sales_in_range r
-        LEFT JOIN clients c ON c.id = r.client_id
-        JOIN sale_items si ON si.sale_id = r.sale_id
-        JOIN products p ON p.id = si.product_id
+        LEFT JOIN clients c ON c.id = r.client_id AND c.tenant_id = r.tenant_id
+        JOIN sale_items si ON si.sale_id = r.sale_id AND si.tenant_id = r.tenant_id
+        JOIN products p ON p.id = si.product_id AND p.tenant_id = si.tenant_id
         GROUP BY address, product_id, product_name
       ),
       ranked AS (
@@ -50,30 +53,32 @@ export async function reportByAddress(req, res) {
       FROM ranked
       WHERE rn = 1
       ORDER BY address ASC
-      `
-    )
-    .all(start, end);
+      `,
+      [tenantId, start, end]
+  );
+  const byAddressRows = byAddressResult.rows;
 
   // B) Ganancia neta y % neto por producto en el mes
-  const profitRows = db
-    .prepare(
+  const profitResult = await query(
       `
       SELECT
         p.id,
         p.name,
         SUM(si.quantity) AS qty,
-        SUM(si.quantity * si.unit_price) AS revenue,
-        SUM(si.quantity * p.purchase_price) AS cost,
-        SUM(si.quantity * (si.unit_price - p.purchase_price)) AS net_profit
+        SUM(si.subtotal) AS revenue,
+        SUM(si.total_cost) AS cost,
+        SUM(si.subtotal - si.total_cost) AS net_profit
       FROM sales s
-      JOIN sale_items si ON si.sale_id = s.id
-      JOIN products p ON p.id = si.product_id
-      WHERE s.sale_date >= ? AND s.sale_date < ?
+      JOIN sale_items si ON si.sale_id = s.id AND si.tenant_id = s.tenant_id
+      JOIN products p ON p.id = si.product_id AND p.tenant_id = si.tenant_id
+      WHERE s.tenant_id = $1
+        AND s.sale_date >= $2::date AND s.sale_date < $3::date
       GROUP BY p.id, p.name
       ORDER BY net_profit DESC
-      `
-    )
-    .all(start, end);
+      `,
+      [tenantId, start, end]
+  );
+  const profitRows = profitResult.rows;
 
   const profitByProduct = profitRows.map((r) => {
     const revenue = Number(r.revenue || 0);

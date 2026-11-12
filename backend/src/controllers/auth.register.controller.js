@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import { db } from "../db/sqlite.js";
+import { withTransaction } from "../db/postgres.js";
 
 export async function registerAdmin(req, res) {
   const { email, password, name } = req.body || {};
@@ -10,23 +10,24 @@ export async function registerAdmin(req, res) {
   const password_hash = await bcrypt.hash(password, 10);
 
   try {
-    const tx = db.transaction(() => {
+    const out = await withTransaction(async (client) => {
       // 1) create tenant
-      const tInfo = db.prepare("INSERT INTO tenants DEFAULT VALUES").run();
-      const tenantId = Number(tInfo.lastInsertRowid);
+      const tenantResult = await client.query(
+        "INSERT INTO tenants DEFAULT VALUES RETURNING id"
+      );
+      const tenantId = Number(tenantResult.rows[0].id);
 
       // 2) create admin for that tenant
-      const aInfo = db
-        .prepare("INSERT INTO admins (tenant_id, email, password_hash, name) VALUES (?, ?, ?, ?)")
-        .run(tenantId, email, password_hash, name);
+      const adminResult = await client.query(
+        "INSERT INTO admins (tenant_id, email, password_hash, name) VALUES ($1, $2, $3, $4) RETURNING id",
+        [tenantId, email, password_hash, name]
+      );
 
-      return { tenantId, adminId: Number(aInfo.lastInsertRowid) };
+      return { tenantId, adminId: Number(adminResult.rows[0].id) };
     });
-
-    const out = tx();
     return res.status(201).json({ ok: true, tenantId: out.tenantId, adminId: out.adminId });
   } catch (e) {
-    if (String(e?.code) === "SQLITE_CONSTRAINT_UNIQUE") {
+    if (e?.code === "23505" || e?.code === "SQLITE_CONSTRAINT_UNIQUE") {
       return res.status(409).json({ message: "Email already exists" });
     }
     return res.status(500).json({ message: "Error creating admin" });

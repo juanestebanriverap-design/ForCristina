@@ -1,19 +1,26 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
-import { db } from "./db/sqlite.js";
+import { pool, withTransaction } from "./db/postgres.js";
 
-const email = "Cristina@gmail.com";
-const password = "Administrador1048"; // Cambia esto por la contraseña que quieras para el admin
-const name = "Administrador";
+const email = process.env.SEED_ADMIN_EMAIL;
+const password = process.env.SEED_ADMIN_PASSWORD;
+const name = process.env.SEED_ADMIN_NAME;
+if (!email || !password || !name) {
+  throw new Error("Set SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD, and SEED_ADMIN_NAME.");
+}
 
 const hash = await bcrypt.hash(password, 10);
-
-// SQLite: equivalente a INSERT IGNORE
-db.prepare(
-  "INSERT OR IGNORE INTO admins (email, password_hash, name) VALUES (?, ?, ?)"
-).run(email, hash, name);
-
-console.log("Admin seeded:");
-console.log({ email, password });
-
-process.exit(0);
+try {
+  const admin = await withTransaction(async (client) => {
+    const tenantResult = await client.query("INSERT INTO tenants DEFAULT VALUES RETURNING id");
+    const result = await client.query(
+      `INSERT INTO admins (tenant_id, email, password_hash, name)
+       VALUES ($1, $2, $3, $4) RETURNING id`,
+      [tenantResult.rows[0].id, email, hash, name]
+    );
+    return result.rows[0];
+  });
+  console.log(`Admin created with id ${admin.id}.`);
+} finally {
+  await pool.end();
+}
