@@ -14,7 +14,6 @@ import { asyncHandler } from "./middleware/async-handler.js";
 import { query } from "./db/postgres.js";
 
 const app = express();
-app.set("trust proxy", 1);
 const frontendDist = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../frontend/dist"
@@ -35,8 +34,13 @@ const corsMiddleware = cors({
 
 app.use((req, res, next) => {
   const origin = req.get("origin");
-  const requestOrigin = `${req.protocol}://${req.get("host")}`;
-  if (origin && origin === requestOrigin) return next();
+  const requestHost = req.get("host");
+  if (
+    origin &&
+    (origin === `https://${requestHost}` || origin === `http://${requestHost}`)
+  ) {
+    return next();
+  }
   return corsMiddleware(req, res, next);
 });
 app.use(express.json());
