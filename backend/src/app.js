@@ -14,6 +14,7 @@ import { asyncHandler } from "./middleware/async-handler.js";
 import { query } from "./db/postgres.js";
 
 const app = express();
+app.set("trust proxy", 1);
 const frontendDist = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../frontend/dist"
@@ -24,16 +25,20 @@ const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173")
   .map((s) => s.trim())
   .filter(Boolean);
 
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      // Permite tools como curl/postman (sin origin)
-      if (!origin) return cb(null, true);
-      if (allowedOrigins.includes(origin) || origin === "null") return cb(null, true);
-      return cb(new Error("Not allowed by CORS"));
-    },
-  })
-);
+const corsMiddleware = cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin) || origin === "null") return cb(null, true);
+    return cb(new Error("Not allowed by CORS"));
+  },
+});
+
+app.use((req, res, next) => {
+  const origin = req.get("origin");
+  const requestOrigin = `${req.protocol}://${req.get("host")}`;
+  if (origin && origin === requestOrigin) return next();
+  return corsMiddleware(req, res, next);
+});
 app.use(express.json());
 
 app.get("/api/health", asyncHandler(async (req, res) => {
