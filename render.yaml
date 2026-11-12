@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: forcristina-api
+    runtime: node
+    plan: free
+    buildCommand: npm ci --prefix backend --omit=dev && npm ci --prefix frontend && npm run build --prefix frontend
+    startCommand: npm start --prefix backend
+    healthCheckPath: /api/health
+    envVars:
+      - key: VITE_API_BASE_URL
+        value: https://forcristina.onrender.com/api
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_CA_CERT_BASE64
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
