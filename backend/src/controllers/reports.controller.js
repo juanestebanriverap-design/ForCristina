@@ -20,18 +20,17 @@ export async function dailyReport(req, res) {
   );
   const totals = totalsResult.rows[0];
 
-  const netProfitResult = await query(
+  const grossProfitResult = await query(
       `
-      SELECT COALESCE(SUM(si.subtotal - si.total_cost), 0) AS net_profit
+      SELECT COALESCE(SUM(si.subtotal - si.total_cost), 0) AS gross_profit
       FROM sales s
       JOIN sale_items si ON si.sale_id = s.id AND si.tenant_id = s.tenant_id
-      JOIN products p ON p.id = si.product_id AND p.tenant_id = si.tenant_id
       WHERE s.tenant_id = $1
         AND s.sale_date::date = $2::date
       `,
       [tenantId, date]
   );
-  const netProfit = netProfitResult.rows[0];
+  const grossProfit = grossProfitResult.rows[0];
 
   const topProductsResult = await query(
       `
@@ -57,7 +56,9 @@ export async function dailyReport(req, res) {
     date,
     invoices: Number(totals?.invoices || 0),
     total_sold: Number(totals?.total_sold || 0),
-    net_profit: Number(netProfit?.net_profit || 0),
+    gross_profit: Number(grossProfit?.gross_profit || 0),
+    // Keep the old field for clients that have not been updated yet.
+    net_profit: Number(grossProfit?.gross_profit || 0),
     topProducts: topProducts.map((r) => ({
       id: r.id,
       name: r.name,
@@ -94,19 +95,18 @@ export async function monthlyReport(req, res) {
   );
   const totals = totalsResult.rows[0];
 
-  const netProfitResult = await query(
+  const grossProfitResult = await query(
       `
-      SELECT COALESCE(SUM(si.subtotal - si.total_cost), 0) AS net_profit
+      SELECT COALESCE(SUM(si.subtotal - si.total_cost), 0) AS gross_profit
       FROM sales s
       JOIN sale_items si ON si.sale_id = s.id AND si.tenant_id = s.tenant_id
-      JOIN products p ON p.id = si.product_id AND p.tenant_id = si.tenant_id
       WHERE s.tenant_id = $1
         AND s.sale_date >= $2::date
         AND s.sale_date < $3::date
       `,
       [tenantId, start, end]
   );
-  const netProfit = netProfitResult.rows[0];
+  const grossProfit = grossProfitResult.rows[0];
 
   const byDayResult = await query(
       `
@@ -127,7 +127,9 @@ export async function monthlyReport(req, res) {
     month,
     invoices: Number(totals?.invoices || 0),
     total_sold: Number(totals?.total_sold || 0),
-    net_profit: Number(netProfit?.net_profit || 0),
+    gross_profit: Number(grossProfit?.gross_profit || 0),
+    // Keep the old field for clients that have not been updated yet.
+    net_profit: Number(grossProfit?.gross_profit || 0),
     byDay: byDay.map((r) => ({
       day: r.day,
       total: Number(r.total || 0),

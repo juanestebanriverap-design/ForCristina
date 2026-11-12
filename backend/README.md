@@ -71,6 +71,11 @@ altera el costo de las unidades ya recibidas; las nuevas compras usan el precio
 registrado en su pedido. Las ventas guardan su costo FIFO para que los reportes
 de ganancia no cambien retroactivamente cuando se actualiza el precio.
 
+Los reportes calculan la ganancia bruta como ingresos menos el costo FIFO de los
+productos vendidos; no descuentan gastos operativos. El reporte mensual también
+desglosa la ganancia realizada por lote. Las ventas se conservan para que los
+reportes históricos sigan disponibles.
+
 ## Importar los datos de SQLite
 
 Haz la importación una sola vez, antes de registrar una cuenta nueva en la API.
