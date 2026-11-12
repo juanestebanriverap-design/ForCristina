@@ -1,5 +1,10 @@
 import { z } from "zod";
 import { query, withTransaction } from "../db/postgres.js";
+import {
+  consumeInventory,
+  recordSaleItemAllocations,
+  restoreSaleItemInventory,
+} from "../inventory/fifo.js";
 
 const SaleCreate = z.object({
   client_id: z.number().int().optional().nullable(),
@@ -28,6 +33,34 @@ async function recomputeSaleTotal(client, tenantId, saleId) {
     [total, tenantId, saleId]
   );
   return total;
+}
+
+async function insertFifoSaleItem(client, tenantId, saleId, item) {
+  const cost = await consumeInventory(client, tenantId, item.product_id, item.quantity);
+  if (Number(item.unit_price) < cost.unitCost) {
+    throw new Error(
+      `El precio de venta del producto ${item.product_id} no puede ser menor que su costo FIFO (${cost.unitCost}).`
+    );
+  }
+  const subtotal = Number((item.quantity * item.unit_price).toFixed(2));
+  const { rows } = await client.query(
+    `INSERT INTO sale_items
+     (tenant_id, sale_id, product_id, quantity, unit_price, unit_cost, total_cost, subtotal)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING id`,
+    [
+      tenantId,
+      saleId,
+      item.product_id,
+      item.quantity,
+      item.unit_price,
+      cost.unitCost,
+      cost.totalCost,
+      subtotal,
+    ]
+  );
+  await recordSaleItemAllocations(client, tenantId, rows[0].id, cost.allocations);
+  return subtotal;
 }
 
 export async function createSale(req, res) {
@@ -69,7 +102,7 @@ export async function createSale(req, res) {
 
       const productIds = [...quantities.keys()].sort((left, right) => left - right);
       const { rows: lockedProducts } = await client.query(
-        `SELECT id, stock, purchase_price FROM products
+        `SELECT id, stock FROM products
          WHERE tenant_id = $1 AND id = ANY($2::bigint[])
          ORDER BY id FOR UPDATE`,
         [tenantId, productIds]
@@ -78,39 +111,13 @@ export async function createSale(req, res) {
       for (const [productId, quantity] of quantities) {
         const product = products.get(productId);
         if (!product) throw new Error(`Producto inválido: ${productId}`);
-        if (items.some((item) =>
-          item.product_id === productId && Number(item.unit_price) < Number(product.purchase_price)
-        )) {
-          throw new Error(`Precio de venta inválido para el producto ${productId}.`);
-        }
         if (Number(product.stock) < quantity) {
           throw new Error(`No hay stock suficiente para el producto ${productId}`);
         }
-        products.set(productId, product);
       }
 
       for (const item of itemsWithSubtotal) {
-        await client.query(
-          `INSERT INTO sale_items
-           (tenant_id, sale_id, product_id, quantity, unit_price, unit_cost, subtotal)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [
-            tenantId,
-            newSaleId,
-            item.product_id,
-            item.quantity,
-            item.unit_price,
-            Number(products.get(item.product_id).purchase_price),
-            item.subtotal,
-          ]
-        );
-      }
-      for (const [productId, quantity] of quantities) {
-        await client.query(
-          `UPDATE products SET stock = stock - $1, updated_at = CURRENT_TIMESTAMP
-           WHERE tenant_id = $2 AND id = $3`,
-          [quantity, tenantId, productId]
-        );
+        await insertFifoSaleItem(client, tenantId, newSaleId, item);
       }
       return newSaleId;
     });
@@ -155,21 +162,17 @@ export async function updateSale(req, res) {
       }
 
       const previousItemsResult = await client.query(
-        `SELECT product_id, quantity, unit_cost
+        `SELECT id, product_id, quantity, unit_cost
          FROM sale_items WHERE tenant_id = $1 AND sale_id = $2`,
         [tenantId, saleId]
       );
       const previousItems = previousItemsResult.rows;
       const previousQuantities = new Map();
-      const previousCosts = new Map();
       for (const item of previousItems) {
         previousQuantities.set(
           item.product_id,
           (previousQuantities.get(item.product_id) || 0) + Number(item.quantity)
         );
-        if (!previousCosts.has(item.product_id)) {
-          previousCosts.set(item.product_id, Number(item.unit_cost));
-        }
       }
 
       const newQuantities = new Map();
@@ -183,43 +186,19 @@ export async function updateSale(req, res) {
       const productIds = [...new Set([...previousQuantities.keys(), ...newQuantities.keys()])]
         .sort((left, right) => left - right);
       const { rows: lockedProducts } = await client.query(
-        `SELECT id, stock, purchase_price FROM products
+        `SELECT id, stock FROM products
          WHERE tenant_id = $1 AND id = ANY($2::bigint[])
          ORDER BY id FOR UPDATE`,
         [tenantId, productIds]
       );
       const products = new Map(lockedProducts.map((product) => [Number(product.id), product]));
-      const productDetails = new Map();
       for (const [productId, quantity] of newQuantities) {
         const product = products.get(productId);
         if (!product) throw new Error(`Producto inválido: ${productId}`);
-
-        const availableStock = Number(product.stock) + (previousQuantities.get(productId) || 0);
-        if (availableStock < quantity) {
-          throw new Error(`No hay stock suficiente para el producto ${productId}`);
-        }
-
-        const unitCost = previousCosts.has(productId)
-          ? previousCosts.get(productId)
-          : Number(product.purchase_price);
-        if (items.some((item) => item.product_id === productId && item.unit_price < unitCost)) {
-          throw new Error(
-            `Precio de venta inválido para el producto ${productId}. Mínimo permitido: ${unitCost}`
-          );
-        }
-        productDetails.set(productId, { product, unitCost });
       }
 
-      for (const productId of new Set([...previousQuantities.keys(), ...newQuantities.keys()])) {
-        const quantityDelta =
-          (previousQuantities.get(productId) || 0) - (newQuantities.get(productId) || 0);
-        if (quantityDelta !== 0) {
-          await client.query(
-            `UPDATE products SET stock = stock + $1, updated_at = CURRENT_TIMESTAMP
-             WHERE tenant_id = $2 AND id = $3`,
-            [quantityDelta, tenantId, productId]
-          );
-        }
+      for (const item of previousItems) {
+        await restoreSaleItemInventory(client, tenantId, item);
       }
 
       await client.query(
@@ -229,22 +208,7 @@ export async function updateSale(req, res) {
 
       let total = 0;
       for (const item of items) {
-        const subtotal = Number((item.quantity * item.unit_price).toFixed(2));
-        total += subtotal;
-        await client.query(
-          `INSERT INTO sale_items
-           (tenant_id, sale_id, product_id, quantity, unit_price, unit_cost, subtotal)
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-          [
-            tenantId,
-            saleId,
-            item.product_id,
-            item.quantity,
-            item.unit_price,
-            productDetails.get(item.product_id).unitCost,
-            subtotal,
-          ]
-        );
+        total += await insertFifoSaleItem(client, tenantId, saleId, item);
       }
       total = Number(total.toFixed(2));
 
@@ -359,7 +323,7 @@ export async function updateSaleItemQuantity(req, res) {
       }
       const itemResult = await client.query(
           `
-          SELECT id, tenant_id, sale_id, product_id, quantity, unit_price
+          SELECT id, tenant_id, sale_id, product_id, quantity, unit_price, unit_cost
           FROM sale_items
           WHERE tenant_id = $1 AND id = $2 AND sale_id = $3
           LIMIT 1 FOR UPDATE
@@ -374,39 +338,33 @@ export async function updateSaleItemQuantity(req, res) {
         throw err;
       }
 
-      const oldQty = Number(item.quantity);
-      const delta = Number(newQty) - oldQty;
-
-      if (delta !== 0) {
-        const productResult = await client.query(
-          "SELECT id, stock FROM products WHERE tenant_id = $1 AND id = $2 LIMIT 1 FOR UPDATE",
-          [tenantId, item.product_id]
+      const productResult = await client.query(
+        "SELECT id FROM products WHERE tenant_id = $1 AND id = $2 LIMIT 1 FOR UPDATE",
+        [tenantId, item.product_id]
+      );
+      if (!productResult.rows[0]) throw new Error(`Product not found: ${item.product_id}`);
+      await restoreSaleItemInventory(client, tenantId, item);
+      await client.query(
+        "DELETE FROM sale_item_lots WHERE tenant_id = $1 AND sale_item_id = $2",
+        [tenantId, itemId]
+      );
+      const cost = await consumeInventory(client, tenantId, item.product_id, Number(newQty));
+      if (Number(item.unit_price) < cost.unitCost) {
+        const err = new Error(
+          `El precio de venta no puede ser menor que el costo FIFO (${cost.unitCost}).`
         );
-        const prod = productResult.rows[0];
-
-        if (!prod) throw new Error(`Product not found: ${item.product_id}`);
-
-        if (delta > 0 && Number(prod.stock) < delta) {
-          const err = new Error("Not enough stock");
-          err.status = 409;
-          throw err;
-        }
-
-        // stock = stock - delta
-        await client.query(
-          `UPDATE products SET stock = stock - $1, updated_at = CURRENT_TIMESTAMP
-           WHERE tenant_id = $2 AND id = $3`,
-          [delta, tenantId, item.product_id]
-        );
+        err.status = 409;
+        throw err;
       }
 
       const subtotal = Number((Number(newQty) * Number(item.unit_price)).toFixed(2));
 
       await client.query(
-        `UPDATE sale_items SET quantity = $1, subtotal = $2
-         WHERE tenant_id = $3 AND id = $4 AND sale_id = $5`,
-        [newQty, subtotal, tenantId, itemId, saleId]
+        `UPDATE sale_items SET quantity = $1, unit_cost = $2, total_cost = $3, subtotal = $4
+         WHERE tenant_id = $5 AND id = $6 AND sale_id = $7`,
+        [newQty, cost.unitCost, cost.totalCost, subtotal, tenantId, itemId, saleId]
       );
+      await recordSaleItemAllocations(client, tenantId, itemId, cost.allocations);
 
       const total = await recomputeSaleTotal(client, tenantId, saleId);
 
@@ -452,7 +410,7 @@ export async function deleteSaleItem(req, res) {
       }
       const itemResult = await client.query(
           `
-          SELECT id, sale_id, product_id, quantity
+          SELECT id, sale_id, product_id, quantity, unit_cost
           FROM sale_items
           WHERE tenant_id = $1 AND id = $2 AND sale_id = $3
           LIMIT 1 FOR UPDATE
@@ -467,17 +425,17 @@ export async function deleteSaleItem(req, res) {
         throw err;
       }
 
+      const productResult = await client.query(
+        "SELECT id FROM products WHERE tenant_id = $1 AND id = $2 LIMIT 1 FOR UPDATE",
+        [tenantId, item.product_id]
+      );
+      if (!productResult.rows[0]) throw new Error(`Product not found: ${item.product_id}`);
+      await restoreSaleItemInventory(client, tenantId, item);
+
       // borrar item
       await client.query(
         "DELETE FROM sale_items WHERE tenant_id = $1 AND id = $2 AND sale_id = $3",
         [tenantId, itemId, saleId]
-      );
-
-      // devolver stock
-      await client.query(
-        `UPDATE products SET stock = stock + $1, updated_at = CURRENT_TIMESTAMP
-         WHERE tenant_id = $2 AND id = $3`,
-        [Number(item.quantity), tenantId, item.product_id]
       );
 
       const total = await recomputeSaleTotal(client, tenantId, saleId);

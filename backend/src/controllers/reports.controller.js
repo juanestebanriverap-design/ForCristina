@@ -22,7 +22,7 @@ export async function dailyReport(req, res) {
 
   const netProfitResult = await query(
       `
-      SELECT COALESCE(SUM(si.quantity * (si.unit_price - si.unit_cost)), 0) AS net_profit
+      SELECT COALESCE(SUM(si.subtotal - si.total_cost), 0) AS net_profit
       FROM sales s
       JOIN sale_items si ON si.sale_id = s.id AND si.tenant_id = s.tenant_id
       JOIN products p ON p.id = si.product_id AND p.tenant_id = si.tenant_id
@@ -96,7 +96,7 @@ export async function monthlyReport(req, res) {
 
   const netProfitResult = await query(
       `
-      SELECT COALESCE(SUM(si.quantity * (si.unit_price - si.unit_cost)), 0) AS net_profit
+      SELECT COALESCE(SUM(si.subtotal - si.total_cost), 0) AS net_profit
       FROM sales s
       JOIN sale_items si ON si.sale_id = s.id AND si.tenant_id = s.tenant_id
       JOIN products p ON p.id = si.product_id AND p.tenant_id = si.tenant_id

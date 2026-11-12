@@ -1,6 +1,5 @@
 import { query } from "../db/postgres.js";
 
-
 export async function reportByAddress(req, res) {
   const tenantId = Number(req.user?.tenantId);
   if (!tenantId) return res.status(401).json({ message: "No autorizado" });
@@ -8,7 +7,8 @@ export async function reportByAddress(req, res) {
   const year = Number(req.query.year);
   const month = Number(req.query.month);
 
-  if (!year || !month || month < 1 || month > 12) {
+  if (!Number.isInteger(year) || year < 1 || year > 9998
+    || !Number.isInteger(month) || month < 1 || month > 12) {
     return res.status(400).json({ message: "year y month son requeridos (month 1-12)" });
   }
 
@@ -37,7 +37,7 @@ export async function reportByAddress(req, res) {
         LEFT JOIN clients c ON c.id = r.client_id AND c.tenant_id = r.tenant_id
         JOIN sale_items si ON si.sale_id = r.sale_id AND si.tenant_id = r.tenant_id
         JOIN products p ON p.id = si.product_id AND p.tenant_id = si.tenant_id
-        GROUP BY address, product_id, product_name
+        GROUP BY 1, p.id, p.name
       ),
       ranked AS (
         SELECT
@@ -66,9 +66,9 @@ export async function reportByAddress(req, res) {
         p.id,
         p.name,
         SUM(si.quantity) AS qty,
-        SUM(si.quantity * si.unit_price) AS revenue,
-        SUM(si.quantity * si.unit_cost) AS cost,
-        SUM(si.quantity * (si.unit_price - si.unit_cost)) AS net_profit
+        SUM(si.subtotal) AS revenue,
+        SUM(si.total_cost) AS cost,
+        SUM(si.subtotal - si.total_cost) AS net_profit
       FROM sales s
       JOIN sale_items si ON si.sale_id = s.id AND si.tenant_id = s.tenant_id
       JOIN products p ON p.id = si.product_id AND p.tenant_id = si.tenant_id

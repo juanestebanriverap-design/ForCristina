@@ -27,7 +27,7 @@ export async function registerAdmin(req, res) {
     });
     return res.status(201).json({ ok: true, tenantId: out.tenantId, adminId: out.adminId });
   } catch (e) {
-    if (e?.code === "23505") {
+    if (e?.code === "23505" || e?.code === "SQLITE_CONSTRAINT_UNIQUE") {
       return res.status(409).json({ message: "Email already exists" });
     }
     return res.status(500).json({ message: "Error creating admin" });

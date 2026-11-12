@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { query, withTransaction } from "../db/postgres.js";
+import { receiveInventory } from "../inventory/fifo.js";
 
 const SupplierSchema = z.object({
   name: z.string().trim().min(1),
@@ -292,16 +293,22 @@ export async function receivePurchaseOrder(req, res) {
       }
       const { rows: items } = await client.query(
         `SELECT product_id, quantity, unit_price FROM purchase_order_items
-         WHERE tenant_id = $1 AND order_id = $2`,
+         WHERE tenant_id = $1 AND order_id = $2
+         ORDER BY product_id ASC, id ASC`,
         [tenantId, orderId]
       );
       for (const item of items) {
         if (item.product_id !== null) {
           await client.query(
-            `UPDATE products
-             SET stock = stock + $1, purchase_price = $2, updated_at = CURRENT_TIMESTAMP
-             WHERE tenant_id = $3 AND id = $4`,
-            [item.quantity, item.unit_price, tenantId, item.product_id]
+            "SELECT id FROM products WHERE tenant_id = $1 AND id = $2 FOR UPDATE",
+            [tenantId, item.product_id]
+          );
+          await receiveInventory(
+            client,
+            tenantId,
+            item.product_id,
+            Number(item.quantity),
+            Number(item.unit_price)
           );
         }
       }

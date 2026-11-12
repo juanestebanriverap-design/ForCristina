@@ -15,7 +15,7 @@ const tables = [
   ["products", ["id", "tenant_id", "name", "purchase_price", "stock", "category", "description", "active", "created_at", "updated_at"]],
   ["clients", ["id", "tenant_id", "name", "phone", "address", "notes", "created_at", "updated_at"]],
   ["sales", ["id", "tenant_id", "client_id", "sale_date", "total", "notes", "created_at"]],
-  ["sale_items", ["id", "tenant_id", "sale_id", "product_id", "quantity", "unit_price", "unit_cost", "subtotal"]],
+  ["sale_items", ["id", "tenant_id", "sale_id", "product_id", "quantity", "unit_price", "unit_cost", "total_cost", "subtotal"]],
   ["suppliers", ["id", "tenant_id", "name", "phone", "notes", "created_at", "updated_at"]],
   ["supplier_products", ["tenant_id", "supplier_id", "product_id", "purchase_price"]],
   ["purchase_orders", ["id", "tenant_id", "supplier_id", "supplier_name", "status", "created_at", "received_at"]],
@@ -63,7 +63,7 @@ try {
       const sourceColumns = new Set(
         source.prepare(`PRAGMA table_info("${table}")`).all().map((column) => column.name)
       );
-      let sourceRows;
+      let sourceRows = source.prepare(`SELECT * FROM "${table}"`).all();
       if (table === "sale_items" && !sourceColumns.has("unit_cost")) {
         sourceRows = source.prepare(
           `SELECT si.*, COALESCE(p.purchase_price, 0) AS unit_cost
@@ -72,8 +72,12 @@ try {
              ON p.tenant_id = si.tenant_id AND p.id = si.product_id`
         ).all();
         sourceColumns.add("unit_cost");
-      } else {
-        sourceRows = source.prepare(`SELECT * FROM "${table}"`).all();
+      }
+      if (table === "sale_items" && !sourceColumns.has("total_cost")) {
+        for (const row of sourceRows) {
+          row.total_cost = Number(row.quantity) * Number(row.unit_cost || 0);
+        }
+        sourceColumns.add("total_cost");
       }
       if (!sourceRows.length) continue;
 
