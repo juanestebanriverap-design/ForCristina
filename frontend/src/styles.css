@@ -96,6 +96,93 @@ input:focus, select:focus {
   
 }
 
+.supplier-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid #223055;
+}
+
+.supplier-product-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 240px);
+  gap: 12px;
+  align-items: end;
+  padding: 8px 0;
+  border-bottom: 1px solid #223055;
+}
+
+.supplier-product-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.supplier-product-check input {
+  width: auto;
+}
+
+@media (max-width: 640px) {
+  .supplier-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .supplier-product-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.billing-tabs {
+  margin-top: 0;
+}
+
+.billing-search-label {
+  display: block;
+  max-width: 420px;
+  margin-top: 14px;
+}
+
+.billing-search-label input,
+.sales-history {
+  width: 100%;
+}
+
+.sales-history-item {
+  border-bottom: 1px solid #223055;
+}
+
+.sales-history-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  padding: 14px 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sales-history-summary span {
+  display: grid;
+  gap: 4px;
+}
+
+.sales-history-summary small {
+  opacity: .75;
+}
+
+.sales-history-details {
+  display: grid;
+  gap: 8px;
+  padding: 0 12px 14px;
+}
+
 /* ===== Ticket (factura estilo recibo) ===== */
 .ticket-wrap { margin-top: 12px; overflow:auto; }
 

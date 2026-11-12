@@ -59,6 +59,8 @@ export const api = {
 
   // sales
   createSale: (sale) => request("/sales", { method: "POST", body: JSON.stringify(sale) }),
+  updateSale: (saleId, sale) =>
+    request(`/sales/${saleId}`, { method: "PUT", body: JSON.stringify(sale) }),
   listSales: () => request("/sales"),
   getSale: (saleId) => request(`/sales/${saleId}`),
 
@@ -76,6 +78,25 @@ export const api = {
   monthlyReport: (year, month) => request(`/reports/monthly?year=${year}&month=${month}`),
   byAddressReport: (year, month) =>
     request(`/reports/by-address?year=${year}&month=${month}`),
+
+  // suppliers and purchase orders
+  listSuppliers: () => request("/suppliers"),
+  createSupplier: (supplier) =>
+    request("/suppliers", { method: "POST", body: JSON.stringify(supplier) }),
+  updateSupplier: (id, supplier) =>
+    request(`/suppliers/${id}`, { method: "PUT", body: JSON.stringify(supplier) }),
+  deleteSupplier: (id) => request(`/suppliers/${id}`, { method: "DELETE" }),
+  listPurchaseOrders: () => request("/suppliers/orders"),
+  createPurchaseOrder: (supplierId, items) =>
+    request(`/suppliers/${supplierId}/orders`, {
+      method: "POST",
+      body: JSON.stringify({ items }),
+    }),
+  receivePurchaseOrder: (orderId) =>
+    request(`/suppliers/orders/${orderId}/receive`, {
+      method: "POST",
+      body: "{}",
+    }),
 
   // company
   getCompany: () => request("/company"),

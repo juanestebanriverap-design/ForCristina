@@ -4,6 +4,28 @@ La API Express usa PostgreSQL y es compartida por Electron y la app Android.
 Supabase guarda los datos; Render publica la API. Nunca pongas `DATABASE_URL`,
 la contraseña de PostgreSQL ni `JWT_SECRET` en el frontend o en la app móvil.
 
+## Desarrollo local
+
+En una terminal, inicia el backend desde `backend/`:
+
+```sh
+npm install
+npm run dev
+```
+
+Sin `DATABASE_URL`, el backend usa SQLite en `backend/data/forcristina.sqlite`.
+Si el archivo ya existe, conserva esos datos. En otra terminal inicia el frontend
+desde `frontend/`:
+
+```sh
+npm install
+npm run dev
+```
+
+El frontend local usa `http://localhost:4000/api` por defecto. Configura
+`VITE_API_BASE_URL` en `frontend/.env.local` solo si quieres apuntar a otra API.
+La APK instalada no cambia: sigue usando la URL de API con la que fue compilada.
+
 ## Crear Supabase
 
 1. Crea un proyecto PostgreSQL en [Supabase](https://supabase.com/).
@@ -39,6 +61,15 @@ no pongas ese URI ni una clave `service_role` en Electron o Android.
 El plan Free de Render puede dormir el servicio tras 15 minutos sin tráfico; la
 primera solicitud posterior puede tardar cerca de un minuto. El disco de Render
 es temporal: la base de datos vive en Supabase, no en archivos del servicio.
+
+## Inventario y costos
+
+Cada producto debe tener un nombre único dentro de la cuenta (sin distinguir
+mayúsculas o espacios al inicio/final). El inventario se consume por lotes FIFO:
+las unidades más antiguas salen primero. Cambiar el costo de compra actual no
+altera el costo de las unidades ya recibidas; las nuevas compras usan el precio
+registrado en su pedido. Las ventas guardan su costo FIFO para que los reportes
+de ganancia no cambien retroactivamente cuando se actualiza el precio.
 
 ## Importar los datos de SQLite
 

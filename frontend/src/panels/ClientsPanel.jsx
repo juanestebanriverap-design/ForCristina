@@ -91,7 +91,7 @@ export default function ClientsPanel() {
       </div>
 
       <section className="panel">
-        <h3>Agregar cliente ejemplo: (Trixie la zorra)</h3>
+        <h3>Agregar cliente </h3>
         <form onSubmit={create} className="grid grid-2">
           <div>
             <label>Nombre</label>

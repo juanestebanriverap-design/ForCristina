@@ -4,6 +4,7 @@ import ProductsPanel from "./panels/ProductsPanel.jsx";
 import ClientsPanel from "./panels/ClientsPanel.jsx";
 import BillingPanel from "./panels/BillingPanel.jsx";
 import ReportsPanel from "./panels/ReportsPanel.jsx";
+import SuppliersPanel from "./panels/SuppliersPanel.jsx";
 // arriba de frontend/src/App.jsx (junto con los otros imports)
 import { API_URL } from "./api";
 
@@ -379,6 +380,13 @@ export default function App() {
           Clientes
         </button>
         <button
+          className={tab === "suppliers" ? "active" : ""}
+          onClick={() => setTab("suppliers")}
+          type="button"
+        >
+          Proveedores
+        </button>
+        <button
           className={tab === "billing" ? "active" : ""}
           onClick={() => setTab("billing")}
           type="button"
@@ -396,6 +404,7 @@ export default function App() {
 
       {tab === "products" && <ProductsPanel />}
       {tab === "clients" && <ClientsPanel />}
+      {tab === "suppliers" && <SuppliersPanel />}
       {tab === "billing" && <BillingPanel company={company} />}
       {tab === "reports" && <ReportsPanel />}
     </div>

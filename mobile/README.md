@@ -52,7 +52,9 @@ si cancelas el envío.
 
 Durante el desarrollo local, la app usa `http://192.168.1.5:4000/api` por
 defecto. Para compilar la APK, configura `EXPO_PUBLIC_API_URL` con la URL HTTPS
-de Render más `/api`; nunca incluyas la contraseña de Supabase en la app.
+de Render más `/api`; el perfil preview usa
+`https://forcristina.onrender.com/api`. Nunca incluyas la contraseña de
+Supabase en la app.
 
 ## Compilar la APK
 

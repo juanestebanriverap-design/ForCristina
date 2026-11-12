@@ -6,6 +6,13 @@ function toNum(v, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function hasDuplicateName(items, name, excludedId) {
+  const normalizedName = name.trim().toLocaleLowerCase();
+  return items.some((item) =>
+    item.id !== excludedId && item.name.trim().toLocaleLowerCase() === normalizedName
+  );
+}
+
 export default function ProductsPanel() {
   const empty = useMemo(
     () => ({ name: "", purchase_price: 0.1, stock: 0, category: "", description: "" }),
@@ -34,9 +41,14 @@ export default function ProductsPanel() {
   async function create(e) {
     e.preventDefault();
     setError(""); setOk("");
+    if (hasDuplicateName(items, creating.name)) {
+      setError("Ya existe un producto con ese nombre.");
+      return;
+    }
     try {
       await api.createProduct({
         ...creating,
+        name: creating.name.trim(),
         purchase_price: toNum(creating.purchase_price, 0),
         stock: toNum(creating.stock, 0)
       });
@@ -62,9 +74,14 @@ export default function ProductsPanel() {
 
   async function saveEdit() {
     setError(""); setOk("");
+    if (hasDuplicateName(items, editing.name, editingId)) {
+      setError("Ya existe un producto con ese nombre.");
+      return;
+    }
     try {
       await api.updateProduct(editingId, {
         ...editing,
+        name: editing.name.trim(),
         purchase_price: toNum(editing.purchase_price, 0),
         stock: toNum(editing.stock, 0),
         category: editing.category || null,
@@ -107,7 +124,7 @@ export default function ProductsPanel() {
         <form onSubmit={create} className="grid grid-3">
           <div>
             <label>Nombre</label>
-            <input value={creating.name} onChange={(e) => setCreating(f => ({ ...f, name: e.target.value }))} />
+            <input required value={creating.name} onChange={(e) => setCreating(f => ({ ...f, name: e.target.value }))} />
           </div>
           <div>
             <label>Categoría</label>
@@ -115,12 +132,13 @@ export default function ProductsPanel() {
           </div>
           <div>
             <label>Stock</label>
-            <input type="number" value={creating.stock} onChange={(e) => setCreating(f => ({ ...f, stock: e.target.value }))} />
+            <input type="number" min="0" step="1" value={creating.stock} onChange={(e) => setCreating(f => ({ ...f, stock: e.target.value }))} />
           </div>
           <div>
-            <label>Costo compra</label>
-            <input type="number" step="0.01" value={creating.purchase_price} onChange={(e) => setCreating(f => ({ ...f, purchase_price: e.target.value }))} />
+            <label>Costo compra actual</label>
+            <input type="number" min="0.01" step="0.01" value={creating.purchase_price} onChange={(e) => setCreating(f => ({ ...f, purchase_price: e.target.value }))} />
           </div>
+          <p className="muted full">Las ventas descuentan primero el inventario más antiguo (FIFO). Cambiar el costo actual no modifica el costo de las unidades que ya tienes.</p>
           <div className="full">
             <label>Descripción (opcional)</label>
             <input value={creating.description} onChange={(e) => setCreating(f => ({ ...f, description: e.target.value }))} />
@@ -153,7 +171,7 @@ export default function ProductsPanel() {
 
                   <td>
                     {isEditing ? (
-                      <input value={editing.name} onChange={(e) => setEditing(s => ({ ...s, name: e.target.value }))} />
+                      <input required value={editing.name} onChange={(e) => setEditing(s => ({ ...s, name: e.target.value }))} />
                     ) : (
                       p.name
                     )}
@@ -161,7 +179,7 @@ export default function ProductsPanel() {
 
                   <td>
                     {isEditing ? (
-                      <input type="number" step="0.01" value={editing.purchase_price}
+                      <input type="number" min="0.01" step="0.01" value={editing.purchase_price}
                         onChange={(e) => setEditing(s => ({ ...s, purchase_price: e.target.value }))} />
                     ) : (
                       p.purchase_price
@@ -170,7 +188,7 @@ export default function ProductsPanel() {
 
                   <td>
                     {isEditing ? (
-                      <input type="number" value={editing.stock}
+                      <input type="number" min="0" step="1" value={editing.stock}
                         onChange={(e) => setEditing(s => ({ ...s, stock: e.target.value }))} />
                     ) : (
                       p.stock

@@ -6,7 +6,7 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://forcristina-x2gi.onrender.com/api"
+        "EXPO_PUBLIC_API_URL": "https://forcristina.onrender.com/api"
       },
       "android": {
         "buildType": "apk"

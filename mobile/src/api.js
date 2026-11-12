@@ -2,6 +2,8 @@ export const API_URL =
   process.env.EXPO_PUBLIC_API_URL ||
   (__DEV__ ? "http://192.168.1.5:4000/api" : "");
 
+const REQUEST_TIMEOUT_MS = 60_000;
+
 async function request(token, path, options = {}) {
   if (!API_URL) {
     throw new Error("Falta configurar EXPO_PUBLIC_API_URL con la dirección pública de la API.");
@@ -12,22 +14,39 @@ async function request(token, path, options = {}) {
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  let response;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    response = await fetch(`${API_URL}${path}`, { ...options, headers });
-  } catch {
-    throw new Error(`No se pudo conectar con ${API_URL}. Revisa que el celular y el computador estén en la misma red Wi-Fi.`);
-  }
+    let response;
+    try {
+      response = await fetch(`${API_URL}${path}`, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
+    } catch {
+      if (controller.signal.aborted) {
+        throw new Error(
+          "El servidor no respondió en 60 segundos. Revisa que la API esté activa y pueda conectarse a la base de datos, y vuelve a intentar."
+        );
+      }
+      throw new Error(
+        `No se pudo conectar con ${API_URL}. Comprueba que esa dirección sea accesible desde el teléfono y que el servidor esté activo.`
+      );
+    }
 
-  if (response.status === 204) return null;
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const detail = Array.isArray(data?.issues)
-      ? data.issues.map((issue) => issue.message).join(", ")
-      : data?.message;
-    throw new Error(detail || "No se pudo completar la solicitud.");
+    if (response.status === 204) return null;
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const detail = Array.isArray(data?.issues)
+        ? data.issues.map((issue) => issue.message).join(", ")
+        : data?.message;
+      throw new Error(detail || "No se pudo completar la solicitud.");
+    }
+    return data;
+  } finally {
+    clearTimeout(timeoutId);
   }
-  return data;
 }
 
 const json = (data) => ({ method: "POST", body: JSON.stringify(data) });

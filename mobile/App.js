@@ -300,6 +300,12 @@ function ProductsScreen({ token }) {
     setBusy(true);
     setError("");
     setNotice("");
+    const normalizedName = form.name.trim().toLowerCase();
+    if (items.some((product) => product.name.trim().toLowerCase() === normalizedName)) {
+      setError("Ya existe un producto con ese nombre.");
+      setBusy(false);
+      return;
+    }
     try {
       await api.createProduct(token, {
         ...form,
@@ -329,9 +335,17 @@ function ProductsScreen({ token }) {
   }
 
   async function saveEdit() {
+    setError("");
+    const normalizedName = editing.name.trim().toLowerCase();
+    if (items.some((product) =>
+      product.id !== editing.id && product.name.trim().toLowerCase() === normalizedName
+    )) {
+      setError("Ya existe un producto con ese nombre.");
+      return;
+    }
     try {
       await api.updateProduct(token, editing.id, {
-        name: editing.name,
+        name: editing.name.trim(),
         purchase_price: Number(editing.purchase_price),
         stock: Number(editing.stock),
         category: editing.category || null,

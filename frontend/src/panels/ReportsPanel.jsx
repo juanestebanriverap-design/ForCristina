@@ -87,6 +87,7 @@ export default function ReportsPanel() {
                 <StatCard title="Fecha" value={daily.date} />
                 <StatCard title="Facturas" value={daily.invoices} />
                 <StatCard title="Total vendido" value={money(daily.total_sold)} />
+                <StatCard title="Ganancia neta" value={money(daily.net_profit)} />
               </div>
 
               <h4>Top productos (por cantidad)</h4>
@@ -153,6 +154,7 @@ export default function ReportsPanel() {
                 />
                 <StatCard title="Facturas" value={monthly.invoices} />
                 <StatCard title="Total vendido" value={money(monthly.total_sold)} />
+                <StatCard title="Ganancia neta" value={money(monthly.net_profit)} />
               </div>
 
               <h4>Ventas por día</h4>

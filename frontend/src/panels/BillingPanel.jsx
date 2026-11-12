@@ -31,6 +31,12 @@ export default function BillingPanel({ company }) {
 
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
+  const [section, setSection] = useState("new");
+  const [sales, setSales] = useState([]);
+  const [saleDetails, setSaleDetails] = useState(null);
+  const [editingSaleId, setEditingSaleId] = useState(null);
+  const [clientSearch, setClientSearch] = useState("");
+  const [productSearch, setProductSearch] = useState("");
 
   // info de factura generada
   const [invoice, setInvoice] = useState(null); // { saleId, date, client, items, total }
@@ -46,6 +52,15 @@ export default function BillingPanel({ company }) {
     load();
   }, []);
 
+  async function loadSales() {
+    setError("");
+    try {
+      setSales(await api.listSales());
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
   const selectedClient = useMemo(() => {
     const id = Number(clientId);
     return clients.find((c) => c.id === id) || null;
@@ -54,7 +69,10 @@ export default function BillingPanel({ company }) {
 function addItem() {
   const first = products[0];
   if (!first) return;
-  setItems((it) => [...it, { product_id: first.id, quantity: 1, unit_price: 1000 }]);
+  setItems((it) => [
+    ...it,
+    { product_id: first.id, quantity: 1, unit_price: first.purchase_price },
+  ]);
 }
 
 function removeDraftItem(idx) {
@@ -125,10 +143,12 @@ function lineSubtotal(i) {
         })),
       };
 
-      const res = await api.createSale(payload);
+      const wasEditing = editingSaleId !== null;
+      const res = wasEditing
+        ? await api.updateSale(editingSaleId, payload)
+        : await api.createSale(payload);
 
-      // Traer la venta real (con IDs reales de sale_items)
-      const fresh = await api.getSale(res.id);
+      const fresh = await api.getSale(wasEditing ? editingSaleId : res.id);
 
       setInvoice({
         saleId: fresh.id,
@@ -138,14 +158,62 @@ function lineSubtotal(i) {
         total: fresh.total,
       });
 
-      setOk(`Factura creada. ID: ${fresh.id} Total: ${moneyCOP(fresh.total)}`);
+      setOk(
+        `Factura ${wasEditing ? "actualizada" : "creada"}. ID: ${fresh.id} Total: ${moneyCOP(fresh.total)}`
+      );
 
       setItems([]);
+      setEditingSaleId(null);
+      setSaleDetails(fresh);
       setProducts(await api.listProducts()); // refresca stock
+      await loadSales();
     } catch (e) {
       setError(e.message);
     }
   }
+
+  async function showSaleDetails(saleId) {
+    if (saleDetails?.id === saleId) {
+      setSaleDetails(null);
+      return;
+    }
+    try {
+      setSaleDetails(await api.getSale(saleId));
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  function startEditingSale(sale) {
+    setEditingSaleId(sale.id);
+    setClientId(sale.client_id == null ? "" : String(sale.client_id));
+    setItems((sale.items || []).map((item) => ({
+      product_id: item.product_id,
+      quantity: String(item.quantity),
+      unit_price: String(item.unit_price),
+    })));
+    setInvoice(null);
+    setError("");
+    setOk("");
+    setClientSearch("");
+    setProductSearch("");
+    setSection("new");
+  }
+
+  function cancelEditingSale() {
+    setEditingSaleId(null);
+    setClientId("");
+    setItems([]);
+    setError("");
+    setSection("history");
+  }
+
+  const filteredClients = clients.filter((client) =>
+    client.name.toLocaleLowerCase().includes(clientSearch.trim().toLocaleLowerCase())
+  );
+  const filteredProducts = products.filter((product) =>
+    product.name.toLocaleLowerCase().includes(productSearch.trim().toLocaleLowerCase())
+  );
 
   async function captureTicketCanvas() {
     if (!invoiceRef.current) return null;
@@ -232,15 +300,99 @@ function lineSubtotal(i) {
 
   return (
     <div className="card">
-      <h2>Facturación</h2>
+      <div className="panel-header">
+        <h2>Facturación</h2>
+        <div className="tabs billing-tabs">
+          <button
+            type="button"
+            className={section === "new" ? "active" : ""}
+            onClick={() => setSection("new")}
+          >
+            Nueva factura
+          </button>
+          <button
+            type="button"
+            className={section === "history" ? "active" : ""}
+            onClick={() => {
+              setSection("history");
+              setEditingSaleId(null);
+              loadSales();
+            }}
+          >
+            Historial de ventas
+          </button>
+        </div>
+      </div>
 
+      {section === "history" ? (
+        <section className="panel">
+          <div className="panel-header">
+            <h3>Historial de ventas</h3>
+            <div className="row">
+              <span className="muted">Facturas de los últimos 10 días.</span>
+              <button className="btn secondary" type="button" onClick={loadSales}>Actualizar</button>
+            </div>
+          </div>
+          {error && <div className="error">{error}</div>}
+          {!sales.length ? (
+            <p className="muted">No hay facturas recientes.</p>
+          ) : (
+            <div className="sales-history">
+              {sales.map((item) => (
+                <article className="sales-history-item" key={item.id}>
+                  <button
+                    className="sales-history-summary"
+                    type="button"
+                    onClick={() => showSaleDetails(item.id)}
+                  >
+                    <span>
+                      <strong>Factura #{item.id}</strong>
+                      <small>{new Date(item.sale_date).toLocaleString("es-CO")} · {item.client_name || "Venta sin cliente"}</small>
+                    </span>
+                    <strong>{moneyCOP(item.total)}</strong>
+                  </button>
+                  {saleDetails?.id === item.id && (
+                    <div className="sales-history-details">
+                      {(saleDetails.items || []).map((line) => (
+                        <div className="row" key={line.id}>
+                          <span>{line.quantity} × {line.product_name}</span>
+                          <span>{moneyCOP(line.subtotal)}</span>
+                        </div>
+                      ))}
+                      <div className="row">
+                        <strong>Total</strong>
+                        <strong>{moneyCOP(saleDetails.total)}</strong>
+                      </div>
+                      <button
+                        className="btn secondary"
+                        type="button"
+                        onClick={() => startEditingSale(saleDetails)}
+                      >
+                        Editar factura
+                      </button>
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+          <p className="muted">Las facturas dejan de aparecer después de 10 días y se eliminan después de 45 días.</p>
+        </section>
+      ) : (
+      <>
       <section className="panel">
+        <h3>{editingSaleId ? `Editar factura #${editingSaleId}` : "Nueva factura"}</h3>
         <div className="grid grid-2">
           <div className="full">
             <label>Cliente</label>
+            <input
+              value={clientSearch}
+              onChange={(e) => setClientSearch(e.target.value)}
+              placeholder="Buscar cliente por nombre"
+            />
             <select value={clientId} onChange={(e) => setClientId(e.target.value)}>
               <option value="">(Sin cliente)</option>
-              {clients.map((c) => (
+              {filteredClients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
@@ -255,6 +407,14 @@ function lineSubtotal(i) {
         <button className="btn secondary" onClick={addItem} disabled={products.length === 0}>
           + Agregar producto
         </button>
+        <label className="billing-search-label">
+          Buscar producto
+          <input
+            value={productSearch}
+            onChange={(e) => setProductSearch(e.target.value)}
+            placeholder="Buscar producto por nombre"
+          />
+        </label>
 
         <div style={{ height: 12 }} />
 
@@ -270,7 +430,7 @@ function lineSubtotal(i) {
           )
         }
       >
-        {products.map((p) => (
+        {filteredProducts.map((p) => (
           <option key={p.id} value={p.id}>
             {p.name} (stock {p.stock})
           </option>
@@ -321,9 +481,16 @@ function lineSubtotal(i) {
 
         <div className="row">
           <strong>Total: {moneyCOP(total())}</strong>
+          <div className="row">
+          {editingSaleId && (
+            <button className="btn secondary" type="button" onClick={cancelEditingSale}>
+              Cancelar edición
+            </button>
+          )}
           <button className="btn" onClick={submit} disabled={items.length === 0}>
-            Guardar factura
+            {editingSaleId ? "Guardar cambios" : "Guardar factura"}
           </button>
+          </div>
         </div>
 
         {error && <div className="error">{error}</div>}
@@ -462,6 +629,8 @@ function lineSubtotal(i) {
             WhatsApp: se abre con el mensaje listo. Luego adjunta el PDF o la imagen descargada.
           </p>
         </section>
+      )}
+      </>
       )}
     </div>
   );
