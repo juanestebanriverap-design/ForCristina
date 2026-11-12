@@ -1,5 +1,6 @@
 import { query } from "../db/postgres.js";
 
+
 export async function reportByAddress(req, res) {
   const tenantId = Number(req.user?.tenantId);
   if (!tenantId) return res.status(401).json({ message: "No autorizado" });
