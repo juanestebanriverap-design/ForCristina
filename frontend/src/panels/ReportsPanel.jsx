@@ -29,6 +29,7 @@ export default function ReportsPanel() {
 
   // NUEVO: reporte extra mensual (por dirección + ganancia por producto)
   const [extraMonthly, setExtraMonthly] = useState(null);
+  const [extraMonthlyError, setExtraMonthlyError] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -48,14 +49,18 @@ export default function ReportsPanel() {
 
   async function loadMonthly() {
     setError("");
+    setExtraMonthlyError("");
     setLoading(true);
     try {
       const m = await api.monthlyReport(year, month);
       setMonthly(m);
 
-      // Cargar también el extra
-      const extra = await api.byAddressReport(year, month);
-      setExtraMonthly(extra);
+      try {
+        setExtraMonthly(await api.byAddressReport(year, month));
+      } catch (e) {
+        setExtraMonthly(null);
+        setExtraMonthlyError(e.message);
+      }
     } catch (e) {
       setError(e.message);
       setMonthly(null);
@@ -185,6 +190,13 @@ export default function ReportsPanel() {
                 </table>
               ) : (
                 <p className="muted">No hay ventas en ese mes.</p>
+              )}
+
+              {extraMonthlyError && (
+                <p className="error">
+                  El reporte mensual se cargó, pero no se pudo cargar el detalle adicional:{" "}
+                  {extraMonthlyError}
+                </p>
               )}
 
               {/* NUEVO: Producto top por dirección */}
