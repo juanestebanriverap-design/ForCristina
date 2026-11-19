@@ -234,7 +234,7 @@ export default function App() {
 
               <div className="login-meta">
                 <span className="muted">Mes:</span> {monthLabel} •{" "}
-                
+
 
 ...
 

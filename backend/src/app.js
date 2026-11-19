@@ -24,16 +24,25 @@ const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173")
   .map((s) => s.trim())
   .filter(Boolean);
 
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      // Permite tools como curl/postman (sin origin)
-      if (!origin) return cb(null, true);
-      if (allowedOrigins.includes(origin) || origin === "null") return cb(null, true);
-      return cb(new Error("Not allowed by CORS"));
-    },
-  })
-);
+const corsMiddleware = cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin) || origin === "null") return cb(null, true);
+    return cb(new Error("Not allowed by CORS"));
+  },
+});
+
+app.use((req, res, next) => {
+  const origin = req.get("origin");
+  const requestHost = req.get("host");
+  if (
+    origin &&
+    (origin === `https://${requestHost}` || origin === `http://${requestHost}`)
+  ) {
+    return next();
+  }
+  return corsMiddleware(req, res, next);
+});
 app.use(express.json());
 
 app.get("/api/health", asyncHandler(async (req, res) => {

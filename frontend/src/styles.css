@@ -93,7 +93,7 @@ input:focus, select:focus {
 
 @media (max-width: 900px) {
   .stats { grid-template-columns: 1fr; }
-  
+
 }
 
 .supplier-card {
@@ -370,8 +370,7 @@ input:focus, select:focus {
 @media (max-width: 920px){
   .login-shell{ grid-template-columns: 1fr; max-width: 520px; }
   .login-right{ display:none; }
-  
-  
+
 }
 /* ===== BillingPanel: líneas de productos en horizontal ===== */
 .billing-line {

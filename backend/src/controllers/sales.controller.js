@@ -250,13 +250,6 @@ export async function listSales(req, res) {
   res.json(rows);
 }
 
-export async function purgeExpiredSales() {
-  const result = await query(
-    "DELETE FROM sales WHERE sale_date < CURRENT_TIMESTAMP - INTERVAL '45 days'"
-  );
-  return result.rowCount;
-}
-
 /**
  * GET /api/sales/:id
  */
