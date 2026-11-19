@@ -148,8 +148,8 @@ export async function reportByAddress(req, res) {
       SELECT
         i.product_id,
         p.name AS product_name,
-        NULL AS lot_id,
-        NULL AS lot_received_at,
+        CAST(NULL AS BIGINT) AS lot_id,
+        CAST(NULL AS TIMESTAMPTZ) AS lot_received_at,
         SUM(i.quantity - COALESCE(a.quantity, 0)) AS quantity_sold,
         SUM((i.quantity - COALESCE(a.quantity, 0)) * i.unit_price) AS revenue,
         SUM(i.total_cost - COALESCE(a.cost, 0)) AS cost
